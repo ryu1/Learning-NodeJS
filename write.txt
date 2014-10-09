@@ -1,0 +1,253 @@
+ログイン
+Sign Up
+クラスの落とし穴3 - 継承
+JavaScriptJavaScript(3641)
+3c0aee04aaf14befac98b74617494bb6 normalcocottejsが2013/10/17にKobitoから投稿編
+集リクエストを作成する
+38
+ストック
+0
+コメント
+この投稿をストックする
+poporinm_morisakiminetty99tiesteHamaTechmaetkazu56Shunta_Suzukimpywsounisi5011...
+目次
+はじめに
+
+前回、前々回とクラスの落とし穴をトピックしてあげました。
+今回はクラスの継承の違いによる落とし穴です。
+
+（前回まではなんとなく使ってましたが）
+"落とし穴とは、うまく動いているけど気がついていないだけで実はマズい実装の事"
+とします
+javascriptには本来クラスがないですが、理解を促す為に意図的に使用しています。
+継承
+
+javascriptはプロトタイプベースのため、PHPやjavaのように継承の方法に明確な構文
+がありません。
+
+そのため、継承に似たものを工夫して実装することになります。
+少なくとも継承にプロトタイプチェーンを使用すれば良いだろうというのは理解されて
+いると思いますが、実際にはこれが一番の方法で後は全部だめ！というパターンはあり
+ません。
+ただ、安易な実装は思っている動作とじつは異なる動作をしている事があります。
+
+ここでは一番簡単な方法から継承を実装して確認します。
+
+よくある継承の方法
+
+inherit.js
+// 親クラス
+var Super = function Super (value) {
+    // プロパティ
+    this.prop1 = value;
+};
+// メソッド
+Super.prototype.method1 = function method1 () {
+    console.log('method1');
+};
+
+// 子クラス
+var Sub = function Sub (name) {
+    // 親コンストラクタの呼び出し
+    Super.call(this, name);
+    // プロパティ
+    this.prop2 = 'bar';
+};
+// ■■■継承■■■必ず子クラスのメソッドの定義の前に記述してください
+Sub.prototype = new Super();
+// メソッド
+Sub.prototype.method2 = function method2 () {
+    console.log('method2');
+};
+
+// 使用
+var s = new Sub('foo');
+// プロパティ
+console.log(s.prop1); // fooと表示
+console.log(s.prop2); // barと表示
+// メソッド
+s.method1(); // method1と表示
+s.method2(); // method2と表示
+うまく動作しているようです。
+継承はたった一行で実装しています。これだけで動作するならベストなんではないで
+しょうか！
+
+さて
+
+じつは今回もこの実装には決定的にまずいところが一つあります。
+それが継承の落とし穴です。
+
+さてそれがどのような理由なのか分かるでしょうか？
+
+落とし穴はドコ？
+
+それは、親クラスのコンストラクタにconsole.log('hoge')などの一行を加えてみると
+分かります。
+おそらく、hogeが２回出力される事でしょう。
+
+それはSub.prototype = new Super();で１回目のコンストラクタが呼ばれ、さらにサブ
+クラスから親クラスのコンストラクタが呼ばれている為です。
+
+これがなぜマズいのか？例えば、こんなシナリオはどうでしょう
+
+親クラスのコンストラクタで(websocketなど)ソケットオブジェクト作成
+実際には使用されないオブジェクトがサーバ等に接続をし、すぐに破棄
+その後、実際の接続に使用されるインスタンスが作成し接続する
+クライアントではGCの対象になっているため問題がなく破棄
+サーバ側ではブラウザがページを開く毎に２つのリスナーの作成が行われる
+明らかにサーバに無駄な負担をかけています。
+しかし、実際には動作に問題が起きている事に気がつきにくいです。
+
+親のコンストラクタはどのタイミングで呼ぶべきか？
+
+じつは new Super()で継承を行っても良い条件は、親クラスのコンストラクタにステー
+トメントが存在しない事です。
+ということは、その場合は継承時に呼ばれていも問題ありません。
+親クラスの処理をすべて子クラスに移動させて。上記の処理はこのようにすべきです。
+(嘘)
+
+// 子クラス
+var Sub = function Sub (name) {
+    // プロパティ
+    this.prop1 = value;
+    // プロパティ
+    this.prop2 = 'bar';
+};
+え〜。。。本当ですか？
+
+継承では共通処理をまとめることを目的としているので、「サブクラスのコンストラク
+タだけで初期設定してください！」というのはクラスの継承の利点が損なわれてしまい
+ます。
+そもそも、継承先のクラスすべてにprop1を忘れずに記述するのはおかしいと思いま
+す。
+
+その通りですね。
+子クラスから親クラスのコンストラクタを呼び出すのは、生かしたいなら継承の部分を
+変更するしかありません。
+先の実装は根本的な解決にはなっていませんでした。
+そもそも親クラスでだけで動作する事ができなくなっています。
+これでは抽象クラスしか親クラスに慣れない不便な実装方法だけしかサポートしませ
+ん。
+
+では、ほかの継承の方法を探っていきましょう。
+
+node.jsの場合
+
+node.jsでは、継承をサポートするモジュールutilが実装されています。
+
+util.inheritsを使用して継承し、使用方法は次の通りです
+
+inherits.js
+var util = require('util');
+util.inherits(Sub, Super);
+util.inheritsを使用した継承では、親クラスのコンストラクタが継承時に実行される
+事はありません。
+
+実際はutil.inheritsが何を行っているのかコードをのぞいてみましょう。
+
+util.js
+// util.jsから抜粋
+exports.inherits = function(ctor, superCtor) {
+    ctor.super_ = superCtor;
+    ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+            value: ctor,
+            enumerable: false,
+            writable: true,
+            configurable: true
+        }
+    });
+};
+super_は、inheritsが勝手に作成しているプロパティなので無視してかまいません。
+次の行でObject.createを使用していますね。
+これは、オブジェクトにプロパティを追加した新たなオブジェクトを返します。
+
+クライアントサイドで継承
+
+しかし、クライアントサイドでも使用しようとするとObject.inheritsはIE8など
+Object.createをサポートしないブラウザでは動作しない問題があります。
+そこで、IE8でも動作する継承関数を作成してみます。
+
+詳しい説明は省きますが、上記のutil.inheritsをObject.createを使用しないで、記述
+すると次のようになります。
+
+inherits.js
+var inherits = function inherits(sub, sup) {
+    var F = function F () {};
+    F.prototype = sup.prototype;
+    sub.prototype = new F();
+    sub.prototype.constructor = sub;
+};
+実    configurable: true
+        }
+    });
+};
+super_は、inher³ンストラクタが列挙される、super_プロパティがてかまい
+ません。
+次の行でObject.createを使用は問題ありません。
+これでIE8でも動作する継承ゆィを追加した新たなオブジェクトを返しますã
+クライアントサイドで継承
+
+しかし、クラエãrits(sub, sup) {
+    var F = function F () {};
+    F.prototype = sup.prototype;
+    sub.prototype = new F();
+    sub.prototype.constructor = sub;
+};
+実    configurable: true
+        }
+    });
+};
+super_は、inher³ンストラクタが列挙される、super_プロパティがてかまい
+ません。
+次の行でObject.createを使用は問題ありません。
+これでIE8でも動作する継承ゆィを追加した新たなオブジェクトを返しますã
+クライアントã    }
+    });
+};
+super_は、inher³ンストラクタが列挙される、super_プロパティがてかまい
+ません。
+次の行でObject.createを使用は問題ありま¤アントサイドで継承
+
+しかし、クラエãrit³トを持っている方はログイン
+
+cocottejs
+cocottejs
+327Contribution
+フォローする
+人気の投稿
+
+クラスの落とし穴2 - メソッドとクロージャ
+配列の重複をはじく、もしくは重複を取り出す
+クラ、super_プロパティがてかまいません。
+次の行でObject.createを使用は問題ありま¤アントサイドで継承
+
+しかし、クラエãrit³トを持っている方はログイン
+
+cocottejs
+cocottejs
+327Contribution
+フォローする
+人気の投稿
+
+クラスの落とし穴2 - メソッドとクロージャ
+配列の重複をはじく、もしくは重複を取り出す
+クラ、super_プロパティがてかまいません。
+次の行でObject.createを使用は問題ありま¤アントサイドで継承
+
+しかし、クラエãrit³トを持っている方はログイン
+ Model.defaults や View.events を継承する
+Ey5df1ga normal、もしくは重複を取り出す
+クラ、super_プロパティがてかまいません。
+次の行でObject.creat合わせはこちら
+Qiitaとはタグ一覧Advent Calendar一覧Organization一覧ユーザー一覧Developer
+APIWebhook ドキュメントJavaScript License
+公式ブログ利用規約プライバシーポリシー特定商取引法に基づく表記サポートお問い合
+わせ運営会社
+Incrementsのサービス
+
+Kobito - プログラミングのメモやスニペットの記録に最適なMacアプリケーション
+Qiita:Team - シンプル、スマートかつクローズドな情報共有サービス
+Qiita:Career - プログラマのためのキャリア構築支援サービス
+Copyright ©2014 Increments Inc.
+
