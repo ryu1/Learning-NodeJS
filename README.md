@@ -1,8 +1,10 @@
 Learning-NodeJS
 ===============
 
+## Project Setup
 
-## Node.jsのSetup
+
+### Node.js
 
 <pre>
 $ brew install nodebrew
@@ -17,10 +19,25 @@ $ nodebrew ls
 </pre>
 
 
-## PM2
-
-http://tomowatanabe.hatenablog.com/entry/2014/01/31/124740
+### プロセス管理
 
 <pre>
-npm install -g pm2
+$ npm install -g pm2
 </pre>
+
+### Mocha & Chai
+<pre>
+$ npm install -g mocha
+$ npm install chai --save-dev
+</pre>
+
+### エラーのモニター
+<pre>
+& npm install panic --save-dev
+npm install eyes --save-dev
+npm install stack-trace --save-dev
+npm install callsite --save-dev
+￼￼npm install long-stack-traces --save-dev￼</pre>
+### Express
+<pre>
+npm install express -g</pre>
