@@ -1,0 +1,20 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+
+  script(src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js")
+  script(src="/socket.io/socket.io.js")
+
+  script(type='text/javascript').
+    var socket = io();
+
+    $( document ).ready(function(){
+      socket.emit('chat message', 'aiueo');
+      return false;
+    });
+
+    socket.on('chat message', function(msg){
+      console.log(msg);
+    });
